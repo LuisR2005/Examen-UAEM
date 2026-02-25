@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador UAEMéx – Ingreso Licenciatura</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --azul:      #003366;
+    --azul-med:  #0055a5;
+    --azul-claro:#e8f0fe;
+    --verde:     #1db954;
+    --rojo:      #e63946;
+    --amarillo:  #f4a261;
+    --blanco:    #ffffff;
+    --gris:      #f0f4f8;
+    --texto:     #1a1a2e;
+    --sombra:    0 4px 24px rgba(0,51,102,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: linear-gradient(135deg, #e8f0fe 0%, #dbeafe 50%, #ede9fe 100%);
+    min-height: 100vh;
+    color: var(--texto);
+  }
+
+  /* ── PANTALLAS ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+
+  /* ── INICIO ── */
+  #screen-inicio {
+    background: linear-gradient(160deg, #003366 0%, #0055a5 60%, #1a6fc4 100%);
+    position: relative; overflow: hidden;
+  }
+  #screen-inicio::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 30%, rgba(255,255,255,0.08) 0%, transparent 60%);
+  }
+  .inicio-card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 24px;
+    padding: 48px 40px;
+    max-width: 460px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+    position: relative; z-index: 1;
+    animation: slideUp .6s cubic-bezier(.16,1,.3,1) both;
+  }
+  .logo-badge {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #003366, #0055a5);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+    box-shadow: 0 8px 24px rgba(0,51,102,0.3);
+  }
+  .inicio-card h1 { font-size: 1.6rem; font-weight: 800; color: var(--azul); margin-bottom: 6px; }
+  .inicio-card p  { color: #64748b; font-size: .9rem; margin-bottom: 28px; }
+  .inicio-card input {
+    width: 100%; padding: 14px 18px;
+    border: 2px solid #e2e8f0; border-radius: 12px;
+    font-family: 'Sora', sans-serif; font-size: 1rem;
+    outline: none; transition: border .2s;
+    margin-bottom: 16px;
+  }
+  .inicio-card input:focus { border-color: var(--azul-med); }
+
+  .stats-mini {
+    display: flex; gap: 12px; margin-bottom: 24px;
+  }
+  .stat-chip {
+    flex: 1; background: var(--azul-claro); border-radius: 10px;
+    padding: 10px 8px; text-align: center;
+  }
+  .stat-chip .num { font-size: 1.3rem; font-weight: 800; color: var(--azul); }
+  .stat-chip .lbl { font-size: .68rem; color: #64748b; }
+
+  /* ── BOTONES ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 28px; border-radius: 12px; border: none;
+    font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all .2s; width: 100%;
+  }
+  .btn-primary { background: linear-gradient(135deg, #003366, #0055a5); color: white; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,51,102,0.35); }
+  .btn-secondary { background: var(--azul-claro); color: var(--azul); margin-top: 10px; }
+  .btn-secondary:hover { background: #d1e0f7; }
+
+  /* ── EXAMEN ── */
+  #screen-examen { padding: 0; justify-content: flex-start; background: var(--gris); }
+
+  .topbar {
+    width: 100%; background: var(--azul);
+    padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-info { flex: 1; }
+  .topbar-info .alumno { color: rgba(255,255,255,0.7); font-size: .75rem; }
+  .topbar-info .materia { color: white; font-weight: 700; font-size: .95rem; }
+  .timer-box {
+    background: rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 8px 16px; text-align: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 1.2rem;
+    font-weight: 600; color: white; min-width: 90px;
+    transition: background .3s;
+  }
+  .timer-box.urgente { background: rgba(230,57,70,0.7); animation: pulse 1s infinite; }
+
+  .progress-wrap { width: 100%; background: rgba(255,255,255,0.2); height: 4px; }
+  .progress-bar  { height: 4px; background: var(--verde); transition: width .4s; }
+
+  .exam-body {
+    width: 100%; max-width: 760px;
+    margin: 32px auto; padding: 0 20px 40px;
+    animation: fadeIn .3s ease both;
+  }
+
+  .q-counter {
+    font-size: .8rem; font-weight: 600; color: #94a3b8;
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .q-card {
+    background: white; border-radius: 20px;
+    padding: 28px 32px; margin-bottom: 20px;
+    box-shadow: var(--sombra);
+  }
+  .q-text { font-size: 1.15rem; font-weight: 600; line-height: 1.6; }
+
+  .opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:560px){ .opciones { grid-template-columns: 1fr; } }
+
+  .opcion {
+    background: white; border: 2px solid #e2e8f0;
+    border-radius: 14px; padding: 16px 20px;
+    font-family: 'Sora', sans-serif; font-size: .95rem; font-weight: 500;
+    cursor: pointer; text-align: left; transition: all .18s;
+    line-height: 1.4;
+  }
+  .opcion:hover:not(:disabled) { border-color: var(--azul-med); background: var(--azul-claro); transform: translateY(-1px); }
+  .opcion.correcta  { background: #dcfce7; border-color: var(--verde); color: #166534; }
+  .opcion.incorrecta{ background: #fee2e2; border-color: var(--rojo);  color: #991b1b; }
+  .opcion:disabled  { cursor: default; }
+
+  /* ── RESULTADOS ── */
+  #screen-resultado {
+    background: linear-gradient(160deg, #003366 0%, #0055a5 100%);
+  }
+  .result-card {
+    background: white; border-radius: 24px;
+    padding: 40px 36px; max-width: 500px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: slideUp .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  .score-ring {
+    width: 120px; height: 120px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2rem; font-weight: 800;
+    border: 8px solid;
+  }
+  .score-ring .pct { font-size: .75rem; font-weight: 600; }
+  .nivel-badge {
+    display: inline-block; padding: 6px 18px; border-radius: 999px;
+    font-size: .85rem; font-weight: 700; margin-bottom: 20px;
+  }
+  .result-stats { display: flex; gap: 12px; margin-bottom: 24px; }
+  .result-stat {
+    flex: 1; background: var(--gris); border-radius: 14px; padding: 14px 10px;
+  }
+  .result-stat .num { font-size: 1.5rem; font-weight: 800; color: var(--azul); }
+  .result-stat .lbl { font-size: .72rem; color: #64748b; }
+
+  /* ── REVISIÓN ── */
+  #screen-revision { background: var(--gris); justify-content: flex-start; padding: 0; }
+  .rev-header {
+    width: 100%; background: var(--azul); color: white;
+    padding: 20px 24px; display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .rev-header h2 { flex: 1; font-size: 1.1rem; }
+  .rev-body { width: 100%; max-width: 760px; margin: 28px auto; padding: 0 20px 40px; }
+  .rev-item {
+    background: white; border-radius: 16px; padding: 20px 24px;
+    margin-bottom: 12px; border-left: 5px solid;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .rev-item.ok   { border-color: var(--verde); }
+  .rev-item.fail { border-color: var(--rojo); }
+  .rev-materia { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #94a3b8; margin-bottom: 6px; }
+  .rev-pregunta { font-weight: 600; font-size: .95rem; margin-bottom: 10px; line-height: 1.5; }
+  .rev-resp { font-size: .88rem; padding: 6px 12px; border-radius: 8px; display: inline-block; }
+  .rev-resp.tu   { background: #fee2e2; color: #991b1b; }
+  .rev-resp.bien { background: #dcfce7; color: #166534; }
+  .rev-resp.ok-solo { background: #dcfce7; color: #166534; }
+
+  /* ── RANKING ── */
+  #screen-ranking { background: var(--gris); justify-content: flex-start; padding: 0; }
+  .rank-body { width: 100%; max-width: 600px; margin: 28px auto; padding: 0 20px 40px; }
+  .rank-item {
+    background: white; border-radius: 14px; padding: 16px 20px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .rank-pos { font-size: 1.1rem; font-weight: 800; color: var(--azul); min-width: 28px; }
+  .rank-nombre { flex: 1; font-weight: 600; }
+  .rank-pct { font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    padding: 4px 12px; border-radius: 999px; font-size: .9rem; }
+
+  /* ── ANIMACIONES ── */
+  @keyframes slideUp  { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:none; } }
+  @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+  @keyframes pulse    { 0%,100%{ opacity:1; } 50%{ opacity:.6; } }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ INICIO ════════════════ -->
+<div id="screen-inicio" class="screen active">
+  <div class="inicio-card">
+    <div class="logo-badge">🎓</div>
+    <h1>Simulador UAEMéx</h1>
+    <p>Examen de ingreso a Licenciatura — Practica todas las materias</p>
+
+    <div class="stats-mini">
+      <div class="stat-chip"><div class="num" id="total-q">110+</div><div class="lbl">Preguntas</div></div>
+      <div class="stat-chip"><div class="num">7</div><div class="lbl">Materias</div></div>
+      <div class="stat-chip"><div class="num">20 min</div><div class="lbl">Por intento</div></div>
+    </div>
+
+    <input type="text" id="input-nombre" placeholder="Tu nombre completo" maxlength="60" />
+    <button class="btn btn-primary" onclick="iniciarExamen()">🚀 Comenzar examen</button>
+    <button class="btn btn-secondary" onclick="verRanking()">🏆 Ver ranking</button>
+  </div>
+</div>
+
+<!-- ════════════════ EXAMEN ════════════════ -->
+<div id="screen-examen" class="screen">
+  <div class="topbar">
+    <div class="topbar-info">
+      <div class="alumno" id="top-alumno"></div>
+      <div class="materia" id="top-materia"></div>
+    </div>
+    <div class="timer-box" id="timer-box">10:00</div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+
+  <div class="exam-body">
+    <div class="q-counter" id="q-counter"></div>
+    <div class="q-card">
+      <div class="q-text" id="q-text"></div>
+    </div>
+    <div class="opciones" id="opciones"></div>
+  </div>
+</div>
+
+<!-- ════════════════ RESULTADO ════════════════ -->
+<div id="screen-resultado" class="screen">
+  <div class="result-card">
+    <div class="score-ring" id="score-ring">
+      <span id="score-pct-num">0</span>
+      <span class="pct">%</span>
+    </div>
+    <div class="nivel-badge" id="nivel-badge"></div>
+    <div class="result-stats">
+      <div class="result-stat"><div class="num" id="res-aciertos">0</div><div class="lbl">Aciertos</div></div>
+      <div class="result-stat"><div class="num" id="res-total">0</div><div class="lbl">Preguntas</div></div>
+      <div class="result-stat"><div class="num" id="res-tiempo">0</div><div class="lbl">Tiempo usado</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="verRevision()">📋 Ver respuestas</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="irInicio()">🔄 Nuevo intento</button>
+  </div>
+</div>
+
+<!-- ════════════════ REVISIÓN ════════════════ -->
+<div id="screen-revision" class="screen">
+  <div class="rev-header">
+    <h2>📋 Revisión de respuestas</h2>
+    <button class="btn btn-secondary" style="width:auto;padding:8px 16px" onclick="verRanking()">🏆 Ranking</button>
+    <button class="btn btn-secondary" style="width:auto;padding:8px 16px;margin-left:8px" onclick="irInicio()">Inicio</button>
+  </div>
+  <div class="rev-body" id="rev-body"></div>
+</div>
+
+<!-- ════════════════ RANKING ════════════════ -->
+<div id="screen-ranking" class="screen">
+  <div class="rev-header">
+    <h2>🏆 Ranking de resultados</h2>
+    <button class="btn btn-secondary" style="width:auto;padding:8px 16px" onclick="irInicio()">← Inicio</button>
+  </div>
+  <div class="rank-body" id="rank-body"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  BANCO DE PREGUNTAS
+// ═══════════════════════════════════════════
+const banco = [
+  // METODOLOGÍA DE LA INVESTIGACIÓN
+  {m:"Metodología",e:"¿Qué es una hipótesis en una investigación?",o:["Una conclusión definitiva","Una suposición que se comprueba","Un objetivo general","Una fuente bibliográfica"],c:"Una suposición que se comprueba"},
+  {m:"Metodología",e:"¿Cuál es el primer paso del método científico?",o:["Experimentación","Conclusión","Observación y planteamiento del problema","Análisis de datos"],c:"Observación y planteamiento del problema"},
+  {m:"Metodología",e:"La investigación CUALITATIVA se caracteriza por:",o:["Uso de estadísticas","Análisis de datos numéricos","Comprensión de fenómenos sociales y subjetivos","Encuestas masivas"],c:"Comprensión de fenómenos sociales y subjetivos"},
+  {m:"Metodología",e:"La investigación CUANTITATIVA se caracteriza por:",o:["Entrevistas abiertas","Datos numéricos y estadísticos","Análisis de textos","Observación participante"],c:"Datos numéricos y estadísticos"},
+  {m:"Metodología",e:"¿Qué es el marco teórico?",o:["Las conclusiones del trabajo","El conjunto de teorías y antecedentes que sustentan la investigación","El presupuesto del proyecto","La lista de encuestados"],c:"El conjunto de teorías y antecedentes que sustentan la investigación"},
+  {m:"Metodología",e:"Un objetivo de investigación debe ser:",o:["Vago y general","Subjetivo","Claro, medible y alcanzable","Solo descriptivo"],c:"Claro, medible y alcanzable"},
+  {m:"Metodología",e:"¿Qué tipo de investigación examina un fenómeno sin manipular variables?",o:["Experimental","Descriptiva","Longitudinal","Aplicada"],c:"Descriptiva"},
+  {m:"Metodología",e:"La variable que el investigador manipula se llama:",o:["Dependiente","Interviniente","Independiente","Categórica"],c:"Independiente"},
+  {m:"Metodología",e:"¿Qué es el planteamiento del problema?",o:["El índice del trabajo","La delimitación y justificación del tema a investigar","La lista de fuentes","El glosario de términos"],c:"La delimitación y justificación del tema a investigar"},
+  {m:"Metodología",e:"Una fuente PRIMARIA es:",o:["Un resumen de otro autor","Información obtenida directamente de la fuente original","Un artículo de opinión","Un blog de internet"],c:"Información obtenida directamente de la fuente original"},
+  {m:"Metodología",e:"El método DEDUCTIVO va de:",o:["Lo particular a lo general","Lo general a lo particular","Lo abstracto a lo concreto solamente","Lo empírico a lo teórico"],c:"Lo general a lo particular"},
+  {m:"Metodología",e:"¿Qué es la muestra en una investigación?",o:["La totalidad de la población","Un subconjunto representativo de la población","El instrumento de medición","El marco teórico"],c:"Un subconjunto representativo de la población"},
+  {m:"Metodología",e:"El instrumento más común en investigación cuantitativa es:",o:["La entrevista abierta","La observación participante","El cuestionario/encuesta","El diario de campo"],c:"El cuestionario/encuesta"},
+  {m:"Metodología",e:"¿Qué son las conclusiones de una investigación?",o:["Los datos crudos recolectados","Los resultados e interpretaciones finales del estudio","El planteamiento del problema","Los objetivos específicos"],c:"Los resultados e interpretaciones finales del estudio"},
+  {m:"Metodología",e:"La ética en la investigación implica:",o:["Copiar fuentes sin citar","Respetar la privacidad, honestidad y consentimiento de los participantes","Publicar sin revisión","Ignorar los resultados negativos"],c:"Respetar la privacidad, honestidad y consentimiento de los participantes"},
+
+  // COMPRENSIÓN LECTORA
+  {m:"Comprensión Lectora",e:"La idea principal de un texto es:",o:["Un detalle secundario","El tema central que el autor desarrolla","Una anécdota del autor","El título del texto"],c:"El tema central que el autor desarrolla"},
+  {m:"Comprensión Lectora",e:"¿Qué es inferir en la lectura?",o:["Copiar el texto textualmente","Deducir información que no está explícita","Subrayar palabras clave","Leer en voz alta"],c:"Deducir información que no está explícita"},
+  {m:"Comprensión Lectora",e:"Un texto ARGUMENTATIVO busca:",o:["Narrar una historia","Convencer al lector de un punto de vista","Describir un lugar","Dar instrucciones paso a paso"],c:"Convencer al lector de un punto de vista"},
+  {m:"Comprensión Lectora",e:"Un texto EXPOSITIVO tiene como fin:",o:["Divertir al lector","Persuadir con emociones","Informar y explicar un tema de manera objetiva","Narrar eventos ficticios"],c:"Informar y explicar un tema de manera objetiva"},
+  {m:"Comprensión Lectora",e:"El contexto de una palabra sirve para:",o:["Definirla siempre en el diccionario","Deducir su significado según el texto","Ignorar palabras desconocidas","Cambiar su ortografía"],c:"Deducir su significado según el texto"},
+  {m:"Comprensión Lectora",e:"¿Qué es un sinónimo?",o:["Palabra de significado opuesto","Palabra con igual o similar significado","Palabra sin significado","Palabra en otro idioma"],c:"Palabra con igual o similar significado"},
+  {m:"Comprensión Lectora",e:"Un párrafo bien estructurado contiene:",o:["Solo ejemplos","Idea principal y oraciones de apoyo","Solo preguntas retóricas","Únicamente conclusiones"],c:"Idea principal y oraciones de apoyo"},
+  {m:"Comprensión Lectora",e:"¿Qué es un texto NARRATIVO?",o:["Explica fenómenos científicos","Relata eventos reales o ficticios con personajes y trama","Describe características de objetos","Argumenta una postura política"],c:"Relata eventos reales o ficticios con personajes y trama"},
+  {m:"Comprensión Lectora",e:"La coherencia textual se refiere a:",o:["Usar palabras difíciles","La lógica y unidad de sentido entre las ideas del texto","Escribir párrafos muy largos","Usar muchas comas"],c:"La lógica y unidad de sentido entre las ideas del texto"},
+  {m:"Comprensión Lectora",e:"¿Qué son los conectores textuales?",o:["Títulos del texto","Palabras o frases que enlazan ideas (sin embargo, por lo tanto...)","Nombres propios","Signos de puntuación"],c:"Palabras o frases que enlazan ideas (sin embargo, por lo tanto...)"},
+  {m:"Comprensión Lectora",e:"Leer 'entre líneas' significa:",o:["Leer muy despacio","Captar mensajes implícitos no escritos directamente","Leer solo los títulos","Saltar párrafos"],c:"Captar mensajes implícitos no escritos directamente"},
+  {m:"Comprensión Lectora",e:"El propósito de un texto instructivo es:",o:["Entretener","Persuadir","Guiar al lector en pasos a seguir","Describir paisajes"],c:"Guiar al lector en pasos a seguir"},
+
+  // REDACCIÓN
+  {m:"Redacción",e:"¿Cuál oración usa CORRECTAMENTE la coma?",o:["Fui al mercado y, compré pan.","Sin embargo, no pudo llegar.","El niño, corrió rápido.","Hoy, fui a la escuela."],c:"Sin embargo, no pudo llegar."},
+  {m:"Redacción",e:"¿Qué es la redundancia en la redacción?",o:["Usar palabras técnicas","Repetir innecesariamente una idea con distintas palabras","Citar fuentes correctamente","Escribir en tercera persona"],c:"Repetir innecesariamente una idea con distintas palabras"},
+  {m:"Redacción",e:"¿Cuál es la forma correcta de escribir?",o:["A ver venido antes","Haver venido antes","Haber venido antes","A ber venido antes"],c:"Haber venido antes"},
+  {m:"Redacción",e:"La palabra 'mas' sin tilde significa:",o:["Adverbio de cantidad","Conjunción adversativa (pero)","Verbo","Pronombre"],c:"Conjunción adversativa (pero)"},
+  {m:"Redacción",e:"¿Qué signo introduce una enumeración?",o:["El punto y coma","Los dos puntos","La coma","El paréntesis"],c:"Los dos puntos"},
+  {m:"Redacción",e:"La voz activa coloca al:",o:["Objeto directo al inicio","Sujeto como ejecutor de la acción","Verbo al final","Complemento como protagonista"],c:"Sujeto como ejecutor de la acción"},
+  {m:"Redacción",e:"¿Cuál de estas palabras lleva tilde?",o:["Examen","Imagen","Canción","Margen"],c:"Canción"},
+  {m:"Redacción",e:"Un ensayo académico generalmente incluye:",o:["Solo imágenes y gráficas","Introducción, desarrollo y conclusión","Solo datos estadísticos","Diálogos entre personajes"],c:"Introducción, desarrollo y conclusión"},
+  {m:"Redacción",e:"¿Qué es la cohesión textual?",o:["La extensión del texto","La forma en que las oraciones se conectan gramaticalmente","El número de párrafos","La fuente tipográfica usada"],c:"La forma en que las oraciones se conectan gramaticalmente"},
+  {m:"Redacción",e:"¿Cuál es el uso correcto de porque/por qué/porqué?",o:["Son intercambiables","Solo existe 'porque'","Cada uno tiene uso distinto según contexto","Se usan igual en preguntas y respuestas"],c:"Cada uno tiene uso distinto según contexto"},
+
+  // PENSAMIENTO MATEMÁTICO
+  {m:"Matemático",e:"¿Cuánto es el 15% de 300?",o:["30","45","60","15"],c:"45"},
+  {m:"Matemático",e:"Si 3x − 6 = 9, entonces x =",o:["3","4","5","6"],c:"5"},
+  {m:"Matemático",e:"¿Cuál es el área de un rectángulo de 8 m × 5 m?",o:["26 m²","40 m²","13 m²","80 m²"],c:"40 m²"},
+  {m:"Matemático",e:"La raíz cuadrada de 225 es:",o:["13","14","15","16"],c:"15"},
+  {m:"Matemático",e:"Serie: 3, 6, 12, 24, ___",o:["36","48","30","42"],c:"48"},
+  {m:"Matemático",e:"¿Cuánto es 2³ + 3²?",o:["13","17","25","15"],c:"17"},
+  {m:"Matemático",e:"El 40% de 250 es:",o:["80","90","100","110"],c:"100"},
+  {m:"Matemático",e:"Artículo $120 con 25% de descuento. Precio final:",o:["$85","$90","$95","$80"],c:"$90"},
+  {m:"Matemático",e:"¿Cuál es el perímetro de un cuadrado con lado 7 cm?",o:["21 cm","28 cm","49 cm","14 cm"],c:"28 cm"},
+  {m:"Matemático",e:"La mediana del conjunto {3, 7, 8, 12, 15} es:",o:["7","8","12","9"],c:"8"},
+  {m:"Matemático",e:"¿Cuánto es (−3) × (−4)?",o:["−12","12","−7","7"],c:"12"},
+  {m:"Matemático",e:"Simplifica: 18/24",o:["2/3","3/4","4/5","6/8"],c:"3/4"},
+  {m:"Matemático",e:"Un tren a 90 km/h, ¿cuántos km en 2.5 horas?",o:["180 km","200 km","225 km","250 km"],c:"225 km"},
+  {m:"Matemático",e:"¿Cuánto es 5! (factorial de 5)?",o:["25","60","100","120"],c:"120"},
+  {m:"Matemático",e:"Probabilidad de sacar número par al lanzar un dado:",o:["1/6","1/3","1/2","2/3"],c:"1/2"},
+  {m:"Matemático",e:"¿Cuánto es √(49 + 51)?",o:["7","8","10","12"],c:"10"},
+  {m:"Matemático",e:"Serie de Fibonacci: 1, 1, 2, 3, 5, 8, ___",o:["11","12","13","14"],c:"13"},
+  {m:"Matemático",e:"¿Cuál es el ángulo complementario de 35°?",o:["55°","65°","145°","45°"],c:"55°"},
+  {m:"Matemático",e:"La moda del conjunto {4,4,7,9,7,4,5} es:",o:["7","5","4","9"],c:"4"},
+  {m:"Matemático",e:"¿Cuánto es el 30% de 200?",o:["40","60","80","70"],c:"60"},
+
+  // INGLÉS
+  {m:"Inglés",e:"What is the past tense of 'go'?",o:["Goed","Gone","Went","Going"],c:"Went"},
+  {m:"Inglés",e:"Choose the correct sentence:",o:["She don't like coffee.","She doesn't likes coffee.","She doesn't like coffee.","She no like coffee."],c:"She doesn't like coffee."},
+  {m:"Inglés",e:"'Huge' is a synonym of:",o:["Tiny","Enormous","Fast","Quiet"],c:"Enormous"},
+  {m:"Inglés",e:"Which is the correct question?",o:["Where you live?","Where do you live?","Where does you live?","Where live you?"],c:"Where do you live?"},
+  {m:"Inglés",e:"The word 'beautiful' means:",o:["Ugly","Strange","Pretty / Hermoso","Boring"],c:"Pretty / Hermoso"},
+  {m:"Inglés",e:"Complete: 'I ___ studying right now.'",o:["am","is","are","be"],c:"am"},
+  {m:"Inglés",e:"What does 'environment' mean?",o:["Educación","Medio ambiente","Gobierno","Economía"],c:"Medio ambiente"},
+  {m:"Inglés",e:"Choose the correct plural of 'child':",o:["Childs","Childes","Children","Childrens"],c:"Children"},
+  {m:"Inglés",e:"'Although' is used to express:",o:["Cause","Contrast","Purpose","Result"],c:"Contrast"},
+  {m:"Inglés",e:"Complete: 'If it rains, we ___ stay home.'",o:["will","would","can","might"],c:"will"},
+  {m:"Inglés",e:"The antonym of 'success' is:",o:["Victory","Achievement","Failure","Progress"],c:"Failure"},
+  {m:"Inglés",e:"Which sentence is in PRESENT PERFECT?",o:["She was studying.","She has studied.","She studied.","She will study."],c:"She has studied."},
+  {m:"Inglés",e:"'Law' in Spanish means:",o:["Ley","Libro","Llave","Labor"],c:"Ley"},
+  {m:"Inglés",e:"'This book is ___ than that one.'",o:["more interesting","most interesting","interestinger","interesting more"],c:"more interesting"},
+  {m:"Inglés",e:"What does 'research' mean?",o:["Buscar de nuevo","Investigación","Recurso","Resultado"],c:"Investigación"},
+
+  // HISTORIA
+  {m:"Historia",e:"¿En qué año inició la Independencia de México?",o:["1810","1821","1917","1857"],c:"1810"},
+  {m:"Historia",e:"¿Quién dio el Grito de Independencia?",o:["Morelos","Iturbide","Hidalgo","Guerrero"],c:"Hidalgo"},
+  {m:"Historia",e:"¿En qué año consumó México su Independencia?",o:["1810","1821","1824","1815"],c:"1821"},
+  {m:"Historia",e:"La Reforma Liberal en México fue liderada por:",o:["Antonio López de Santa Anna","Benito Juárez","Porfirio Díaz","Agustín de Iturbide"],c:"Benito Juárez"},
+  {m:"Historia",e:"¿Cuánto duró el Porfiriato aproximadamente?",o:["15 años","20 años","30 años","35 años"],c:"35 años"},
+  {m:"Historia",e:"La Revolución Mexicana inició en:",o:["1900","1905","1910","1915"],c:"1910"},
+  {m:"Historia",e:"El Plan de Ayala fue proclamado por:",o:["Pancho Villa","Venustiano Carranza","Emiliano Zapata","Francisco Madero"],c:"Emiliano Zapata"},
+  {m:"Historia",e:"La Primera Guerra Mundial ocurrió entre:",o:["1905-1910","1914-1918","1939-1945","1910-1920"],c:"1914-1918"},
+  {m:"Historia",e:"¿Qué evento marcó el inicio de la Segunda Guerra Mundial?",o:["Invasión de Polonia por Alemania","Bombardeo de Pearl Harbor","Revolución Rusa","Caída del Muro de Berlín"],c:"Invasión de Polonia por Alemania"},
+  {m:"Historia",e:"La Revolución Francesa ocurrió en:",o:["1689","1776","1789","1815"],c:"1789"},
+  {m:"Historia",e:"¿Qué civilización construyó Tenochtitlán?",o:["Maya","Olmeca","Azteca","Tolteca"],c:"Azteca"},
+  {m:"Historia",e:"Hernán Cortés llegó a México en:",o:["1492","1519","1521","1540"],c:"1519"},
+  {m:"Historia",e:"La ONU fue fundada en:",o:["1919","1939","1945","1950"],c:"1945"},
+  {m:"Historia",e:"La Guerra Fría fue entre:",o:["USA y China","USA y Alemania","USA y URSS","USA y Cuba"],c:"USA y URSS"},
+  {m:"Historia",e:"¿Cuál fue la primera constitución de México?",o:["La de 1810","La de 1824","La de 1857","La de 1917"],c:"La de 1824"},
+  {m:"Historia",e:"¿En qué año cayó el Muro de Berlín?",o:["1985","1987","1989","1991"],c:"1989"},
+  {m:"Historia",e:"La Constitución Política de México vigente fue promulgada en:",o:["1857","1910","1917","1920"],c:"1917"},
+  {m:"Historia",e:"Tlatelolco 1968 se refiere a:",o:["Una fiesta nacional","Un movimiento estudiantil masacrado","Una reforma educativa","Un tratado comercial"],c:"Un movimiento estudiantil masacrado"},
+
+  // FORMACIÓN CÍVICA Y DERECHO
+  {m:"Cívica y Derecho",e:"La Constitución Política de México es la ley:",o:["Ordinaria","Secundaria","Suprema","Municipal"],c:"Suprema"},
+  {m:"Cívica y Derecho",e:"¿Cuántos poderes conforman el Estado mexicano?",o:["2","3","4","5"],c:"3"},
+  {m:"Cívica y Derecho",e:"El Poder Ejecutivo Federal recae en:",o:["El Congreso","La SCJN","El Presidente de la República","El Senado"],c:"El Presidente de la República"},
+  {m:"Cívica y Derecho",e:"El Poder Legislativo está conformado por:",o:["Presidente y Gabinete","Cámara de Diputados y Senado","SCJN y Tribunales","INE y TEPJF"],c:"Cámara de Diputados y Senado"},
+  {m:"Cívica y Derecho",e:"¿Cuántos diputados federales integran la Cámara?",o:["300","400","500","600"],c:"500"},
+  {m:"Cívica y Derecho",e:"¿Cuántos senadores tiene el Senado de México?",o:["64","96","128","200"],c:"128"},
+  {m:"Cívica y Derecho",e:"El artículo 1° constitucional establece:",o:["La soberanía nacional","Los derechos humanos y la no discriminación","El territorio nacional","La forma de gobierno"],c:"Los derechos humanos y la no discriminación"},
+  {m:"Cívica y Derecho",e:"El artículo 3° garantiza el derecho a:",o:["La salud","La vivienda","La educación","La seguridad social"],c:"La educación"},
+  {m:"Cívica y Derecho",e:"El artículo 123 constitucional regula:",o:["La religión","El trabajo y la seguridad social","La propiedad privada","La educación"],c:"El trabajo y la seguridad social"},
+  {m:"Cívica y Derecho",e:"¿Qué organismo organiza las elecciones en México?",o:["SCJN","INE","CNDH","SEP"],c:"INE"},
+  {m:"Cívica y Derecho",e:"La CNDH es la Comisión Nacional de:",o:["Control Democrático Humano","Derechos Humanos","Defensa y Hacienda","Desarrollo Humano"],c:"Derechos Humanos"},
+  {m:"Cívica y Derecho",e:"El Derecho Civil regula principalmente:",o:["Relaciones entre Estado y ciudadanos","Relaciones entre particulares","Derecho penal","Derecho internacional"],c:"Relaciones entre particulares"},
+  {m:"Cívica y Derecho",e:"El Derecho Penal tiene como fin:",o:["Regular contratos","Castigar conductas delictivas que dañan a la sociedad","Organizar elecciones","Crear leyes fiscales"],c:"Castigar conductas delictivas que dañan a la sociedad"},
+  {m:"Cívica y Derecho",e:"La soberanía en México reside en:",o:["El Presidente","El Congreso","El pueblo","Los militares"],c:"El pueblo"},
+  {m:"Cívica y Derecho",e:"¿Cuál es la máxima institución judicial en México?",o:["Tribunal Electoral","CNDH","Suprema Corte de Justicia de la Nación","Consejo de la Judicatura"],c:"Suprema Corte de Justicia de la Nación"},
+  {m:"Cívica y Derecho",e:"¿A qué edad se adquiere la mayoría de edad en México?",o:["16 años","17 años","18 años","21 años"],c:"18 años"},
+  {m:"Cívica y Derecho",e:"¿Qué es el voto universal?",o:["Solo votan los hombres","Solo votan los ricos","Todos los ciudadanos tienen derecho al voto","Solo votan los profesionistas"],c:"Todos los ciudadanos tienen derecho al voto"},
+  {m:"Cívica y Derecho",e:"La democracia representativa significa que:",o:["El pueblo gobierna directamente","Los ciudadanos eligen representantes para gobernar","El ejército dirige el gobierno","Los jueces toman decisiones políticas"],c:"Los ciudadanos eligen representantes para gobernar"},
+  {m:"Cívica y Derecho",e:"El amparo en México sirve para:",o:["Pedir permisos de construcción","Proteger los derechos fundamentales de los ciudadanos","Iniciar procesos electorales","Reformar la Constitución"],c:"Proteger los derechos fundamentales de los ciudadanos"},
+  {m:"Cívica y Derecho",e:"¿Cuántos artículos tiene la Constitución Política de México?",o:["100","120","136","200"],c:"136"},
+];
+
+// ═══════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════
+let examen=[], indice=0, puntos=0, tiempoRestante=1200, timerInterval=null;
+let tiempoInicio=0, respuestasUsuario=[], nombre='';
+
+document.getElementById('total-q').textContent = banco.length;
+
+// ═══════════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════════
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-.5); }
+
+function mostrarPantalla(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function fmtTiempo(s){
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+// ═══════════════════════════════════════════
+//  INICIO
+// ═══════════════════════════════════════════
+function iniciarExamen(){
+  nombre = document.getElementById('input-nombre').value.trim();
+  if(!nombre){ alert('Por favor ingresa tu nombre.'); return; }
+
+  examen = shuffle(banco);
+  indice=0; puntos=0; respuestasUsuario=[];
+  tiempoRestante=600; tiempoInicio=Date.now();
+
+  document.getElementById('top-alumno').textContent='👤 '+nombre;
+  mostrarPantalla('screen-examen');
+  iniciarTimer();
+  mostrarPregunta();
+}
+
+function irInicio(){ clearInterval(timerInterval); mostrarPantalla('screen-inicio'); }
+
+// ═══════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════
+function iniciarTimer(){
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    tiempoRestante--;
+    const box = document.getElementById('timer-box');
+    box.textContent = fmtTiempo(tiempoRestante);
+    box.classList.toggle('urgente', tiempoRestante<=60);
+    if(tiempoRestante<=0){ clearInterval(timerInterval); terminarExamen(); }
+  },1000);
+}
+
+// ═══════════════════════════════════════════
+//  PREGUNTA
+// ═══════════════════════════════════════════
+function mostrarPregunta(){
+  if(indice >= examen.length){ terminarExamen(); return; }
+  const p = examen[indice];
+  const pct = (indice/examen.length)*100;
+
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('q-counter').textContent = `Pregunta ${indice+1} de ${examen.length}`;
+  document.getElementById('top-materia').textContent = '📚 '+p.m;
+  document.getElementById('q-text').textContent = p.e;
+
+  const opts = shuffle(p.o);
+  const cont = document.getElementById('opciones');
+  cont.innerHTML='';
+  opts.forEach(op=>{
+    const btn = document.createElement('button');
+    btn.className='opcion';
+    btn.textContent=op;
+    btn.onclick=()=>responder(op, p.c);
+    cont.appendChild(btn);
+  });
+
+  // re-animar
+  document.querySelector('.exam-body').style.animation='none';
+  requestAnimationFrame(()=>{ document.querySelector('.exam-body').style.animation='fadeIn .3s ease both'; });
+}
+
+// ═══════════════════════════════════════════
+//  RESPONDER
+// ═══════════════════════════════════════════
+function responder(elegida, correcta){
+  document.querySelectorAll('.opcion').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===correcta) b.classList.add('correcta');
+    if(b.textContent===elegida && elegida!==correcta) b.classList.add('incorrecta');
+  });
+
+  respuestasUsuario.push(elegida);
+  if(elegida===correcta) puntos++;
+
+  setTimeout(()=>{ indice++; mostrarPregunta(); }, 950);
+}
+
+// ═══════════════════════════════════════════
+//  TERMINAR
+// ═══════════════════════════════════════════
+function terminarExamen(){
+  clearInterval(timerInterval);
+  while(respuestasUsuario.length < examen.length) respuestasUsuario.push('Sin respuesta');
+
+  const pct = Math.round((puntos/examen.length)*100);
+  const usado = Math.round((Date.now()-tiempoInicio)/1000);
+  const minUsado = Math.floor(usado/60)+'m '+( usado%60)+'s';
+
+  // Ring color
+  const ring = document.getElementById('score-ring');
+  if(pct>=90){ ring.style.borderColor='#1db954'; ring.style.color='#1db954'; }
+  else if(pct>=70){ ring.style.borderColor='#f4a261'; ring.style.color='#f4a261'; }
+  else { ring.style.borderColor='#e63946'; ring.style.color='#e63946'; }
+
+  document.getElementById('score-pct-num').textContent=pct;
+  document.getElementById('res-aciertos').textContent=puntos;
+  document.getElementById('res-total').textContent=examen.length;
+  document.getElementById('res-tiempo').textContent=minUsado;
+
+  let nivel, nbg;
+  if(pct>=90){ nivel='🏆 ¡Excelente!'; nbg='#dcfce7'; }
+  else if(pct>=70){ nivel='✅ Bien'; nbg='#fef9c3'; }
+  else if(pct>=50){ nivel='⚠️ Regular'; nbg='#ffedd5'; }
+  else { nivel='❌ Necesitas repasar'; nbg='#fee2e2'; }
+
+  const nb=document.getElementById('nivel-badge');
+  nb.textContent=nivel; nb.style.background=nbg;
+
+  guardarRanking(nombre, pct);
+  mostrarPantalla('screen-resultado');
+}
+
+// ═══════════════════════════════════════════
+//  REVISIÓN
+// ═══════════════════════════════════════════
+function verRevision(){
+  const body = document.getElementById('rev-body');
+  body.innerHTML='';
+  examen.forEach((p,i)=>{
+    const dada = respuestasUsuario[i]||'Sin respuesta';
+    const ok = dada===p.c;
+    const div=document.createElement('div');
+    div.className='rev-item '+(ok?'ok':'fail');
+    div.innerHTML=`
+      <div class="rev-materia">${p.m}</div>
+      <div class="rev-pregunta">${i+1}. ${p.e}</div>
+      ${ok
+        ? `<span class="rev-resp ok-solo">✅ ${dada}</span>`
+        : `<span class="rev-resp tu">❌ Tu respuesta: ${dada}</span>
+           <span class="rev-resp bien" style="margin-left:8px">✔ Correcta: ${p.c}</span>`}
+    `;
+    body.appendChild(div);
+  });
+  mostrarPantalla('screen-revision');
+}
+
+// ═══════════════════════════════════════════
+//  RANKING (localStorage)
+// ═══════════════════════════════════════════
+function guardarRanking(nombre, pct){
+  let ranking = JSON.parse(localStorage.getItem('uaemex_ranking')||'[]');
+  ranking.push({ nombre, pct, fecha: new Date().toLocaleDateString('es-MX') });
+  ranking.sort((a,b)=>b.pct-a.pct);
+  if(ranking.length>50) ranking=ranking.slice(0,50);
+  localStorage.setItem('uaemex_ranking', JSON.stringify(ranking));
+}
+
+function verRanking(){
+  const ranking = JSON.parse(localStorage.getItem('uaemex_ranking')||'[]');
+  const body = document.getElementById('rank-body');
+  if(!ranking.length){
+    body.innerHTML='<p style="text-align:center;color:#94a3b8;margin-top:40px">Aún no hay resultados registrados.</p>';
+  } else {
+    body.innerHTML='';
+    ranking.forEach((r,i)=>{
+      const color = r.pct>=90?'#1db954': r.pct>=70?'#f4a261':'#e63946';
+      const medalla = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      const div=document.createElement('div');
+      div.className='rank-item';
+      div.innerHTML=`
+        <div class="rank-pos">${medalla||('#'+(i+1))}</div>
+        <div class="rank-nombre">${r.nombre}<br><span style="font-size:.72rem;color:#94a3b8">${r.fecha}</span></div>
+        <div class="rank-pct" style="background:${color}22;color:${color}">${r.pct}%</div>
+      `;
+      body.appendChild(div);
+    });
+  }
+  mostrarPantalla('screen-ranking');
+}
+
+// Enter para iniciar
+document.getElementById('input-nombre').addEventListener('keydown',e=>{ if(e.key==='Enter') iniciarExamen(); });
+</script>
+</body>
+</html>
