@@ -234,7 +234,7 @@
     <div class="stats-mini">
       <div class="stat-chip"><div class="num" id="total-q">110+</div><div class="lbl">Preguntas</div></div>
       <div class="stat-chip"><div class="num">7</div><div class="lbl">Materias</div></div>
-      <div class="stat-chip"><div class="num">20 min</div><div class="lbl">Por intento</div></div>
+      <div class="stat-chip"><div class="num">1 hora</div><div class="lbl">Por intento</div></div>
     </div>
 
     <input type="text" id="input-nombre" placeholder="Tu nombre completo" maxlength="60" />
@@ -250,7 +250,7 @@
       <div class="alumno" id="top-alumno"></div>
       <div class="materia" id="top-materia"></div>
     </div>
-    <div class="timer-box" id="timer-box">10:00</div>
+    <div class="timer-box" id="timer-box">60:00</div>
   </div>
   <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
 
@@ -433,7 +433,7 @@ const banco = [
 // ═══════════════════════════════════════════
 //  ESTADO
 // ═══════════════════════════════════════════
-let examen=[], indice=0, puntos=0, tiempoRestante=1200, timerInterval=null;
+let examen=[], indice=0, puntos=0, tiempoRestante=3600, timerInterval=null;
 let tiempoInicio=0, respuestasUsuario=[], nombre='';
 
 document.getElementById('total-q').textContent = banco.length;
@@ -461,7 +461,7 @@ function iniciarExamen(){
 
   examen = shuffle(banco);
   indice=0; puntos=0; respuestasUsuario=[];
-  tiempoRestante=600; tiempoInicio=Date.now();
+  tiempoRestante=3600; tiempoInicio=Date.now();
 
   document.getElementById('top-alumno').textContent='👤 '+nombre;
   mostrarPantalla('screen-examen');
